@@ -4,16 +4,12 @@ Simple interface for ElGamal and Homomorphic-ElGamal cryptosystems.
 ## Usage
 ```rust
 
-        let bit_size = 1024;
-        let pp = ElGamalPP::generate(bit_size);
+        let pp = ElGamalPP::generate_from_rfc7919();
         let keypair = ElGamalKeyPair::generate(&pp);
-        let message1 = BigInt::from(13);
-        let c1 = ElGamal::encrypt(&message1, &keypair.pk).unwrap();
-        let message2 = BigInt::from(9);
-        let c2 = ElGamal::encrypt(&message2, &keypair.pk).unwrap();
-        let c = ElGamal::mul(&c1, &c2).unwrap();
+        let message = BigInt::from(13);
+        let c = ElGamal::encrypt(&message, &keypair.pk).unwrap();
         let message_tag = ElGamal::decrypt(&c, &keypair.sk).unwrap();
-        assert_eq!(BigInt::from(117), message_tag);
+        assert_eq!(message, message_tag);
 ```
 
 ## Contact
