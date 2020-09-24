@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_elgamal_safe() {
-        let bit_size = 1024;
+        let bit_size = 2048;
         let pp = ElGamalPP::generate_safe(bit_size);
         let keypair = ElGamalKeyPair::generate(&pp);
         let message = BigInt::from(13);

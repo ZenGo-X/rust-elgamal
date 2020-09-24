@@ -29,7 +29,7 @@ pub struct ElGamalPrivateKey {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ElGamalKeyPair {
     pub pk: ElGamalPublicKey,
-    sk: ElGamalPrivateKey,
+    pub sk: ElGamalPrivateKey,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
