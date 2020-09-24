@@ -6,8 +6,6 @@ authors = [
     "Omer <omer.shlomovits@gmail.com>"
 ]
 
-homepage = "https://github.com/KZen-networks/vice-city"
-repository = "https://github.com/KZen-networks/vice-city"
 license = "GPL-3.0-or-later"
 categories = ["cryptography"]
 
