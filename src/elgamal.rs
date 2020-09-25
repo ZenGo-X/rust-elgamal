@@ -7,6 +7,9 @@ use crate::ElGamalPP;
 use crate::ElGamalPrivateKey;
 use crate::ElGamalPublicKey;
 use crate::ExponentElGamal;
+
+use crate::rfc7919_groups::{SupportedGroups, SRG};
+
 use curv::arithmetic::traits::Modulo;
 use curv::arithmetic::traits::Samplable;
 use curv::BigInt;
@@ -43,18 +46,8 @@ impl ElGamalPP {
 
     //https://tools.ietf.org/html/rfc7919
     // ffdhe2048
-    pub fn generate_from_rfc7919() -> Self {
-        let q_str = "7FFFFFFF FFFFFFFF D6FC2A2C 515DA54D 57EE2B10 139E9E78
-            EC5CE2C1 E7169B4A D4F09B20 8A3219FD E649CEE7 124D9F7C
-            BE97F1B1 B1863AEC 7B40D901 576230BD 69EF8F6A EAFEB2B0
-            9219FA8F AF833768 42B1B2AA 9EF68D79 DAAB89AF 3FABE49A
-            CC278638 707345BB F15344ED 79F7F439 0EF8AC50 9B56F39A
-            98566527 A41D3CBD 5E0558C1 59927DB0 E88454A5 D96471FD
-            DCB56D5B B06BFA34 0EA7A151 EF1CA6FA 572B76F3 B1B95D8C
-            8583D3E4 770536B8 4F017E70 E6FBF176 601A0266 941A17B0
-            C8B97F4E 74C2C1FF C7278919 777940C1 E1FF1D8D A637D6B9
-            9DDAFE5E 17611002 E2C778C1 BE8B41D9 6379A513 60D977FD
-            4435A11C 30942E4B FFFFFFFF FFFFFFFF";
+    pub fn generate_from_rfc7919(group_id: SupportedGroups) -> Self {
+        let q_str = SRG::p(group_id);
         let q = BigInt::from_str_radix(q_str, 16).unwrap();
         let g = BigInt::from(2);
         ElGamalPP { g, q }
@@ -248,6 +241,7 @@ impl ExponentElGamal {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::ElGamal;
     use crate::ElGamalKeyPair;
     use crate::ElGamalPP;
@@ -277,7 +271,8 @@ mod tests {
 
     #[test]
     fn test_elgamal_rfc7919() {
-        let pp = ElGamalPP::generate_from_rfc7919();
+        let group_id = SupportedGroups::FFDHE2048;
+        let pp = ElGamalPP::generate_from_rfc7919(group_id);
         let keypair = ElGamalKeyPair::generate(&pp);
         let message = BigInt::from(13);
         let c = ElGamal::encrypt(&message, &keypair.pk).unwrap();
@@ -301,7 +296,8 @@ mod tests {
 
     #[test]
     fn test_pow() {
-        let pp = ElGamalPP::generate_from_rfc7919();
+        let group_id = SupportedGroups::FFDHE2048;
+        let pp = ElGamalPP::generate_from_rfc7919(group_id);
         let keypair = ElGamalKeyPair::generate(&pp);
         let message = BigInt::from(13);
         let c = ElGamal::encrypt(&message, &keypair.pk).unwrap();

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod elgamal;
 pub mod prime;
+pub mod rfc7919_groups;
 
 pub use curv::arithmetic::big_gmp::BigInt;
 
