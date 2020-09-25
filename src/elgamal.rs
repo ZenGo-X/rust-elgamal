@@ -187,7 +187,7 @@ impl ExponentElGamal {
         if m.ge(&pk.pp.q) || m.le(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
-        let g_m = BigInt::mod_mul(&pk.pp.g, m, &pk.pp.q);
+        let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
         let y = randomness;
         let c1 = BigInt::mod_pow(&pk.pp.g, y, &pk.pp.q);
         let s = BigInt::mod_pow(&pk.h, y, &pk.pp.q);
