@@ -259,6 +259,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_elgamal_safe() {
         let bit_size = 2048;
         let pp = ElGamalPP::generate_safe(bit_size);
