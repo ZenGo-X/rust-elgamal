@@ -47,9 +47,10 @@ impl ElGamalPP {
     //https://tools.ietf.org/html/rfc7919
     // ffdhe2048
     pub fn generate_from_rfc7919(group_id: SupportedGroups) -> Self {
-        let q_str = SRG::p(group_id);
-        let q = BigInt::from_str_radix(q_str, 16).unwrap();
-        let g = BigInt::from(2);
+        let srg = SRG::new(group_id);
+        // let q_str = SRG::p(group_id);
+        let q = BigInt::from_str_radix(srg.q, 16).unwrap();
+        let g = BigInt::from(srg.g);
         ElGamalPP { g, q }
     }
 
