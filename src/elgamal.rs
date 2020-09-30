@@ -108,10 +108,15 @@ impl ElGamal {
         if m.ge(&pk.pp.q) || m.le(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
+        if randomness.ge(&pk.pp.q) || randomness.le(&BigInt::zero()) {
+            return Err(ElGamalError::EncryptionError);
+        }
         let y = randomness;
         let c1 = BigInt::mod_pow(&pk.pp.g, y, &pk.pp.q);
         let s = BigInt::mod_pow(&pk.h, y, &pk.pp.q);
+        //  let sm = &s * &m;
         let c2 = BigInt::mod_mul(&s, &m, &pk.pp.q);
+        //    let c2 = BigInt::modulus(&sm, &pk.pp.q);
         Ok(ElGamalCiphertext {
             c1,
             c2,
@@ -159,7 +164,7 @@ impl ExponentElGamal {
         if m.ge(&pk.pp.q) || m.le(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
-        let g_m = BigInt::mod_mul(&pk.pp.g, m, &pk.pp.q);
+        let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
         let y = BigInt::sample_below(&pk.pp.q);
         let c1 = BigInt::mod_pow(&pk.pp.g, &y, &pk.pp.q);
         let s = BigInt::mod_pow(&pk.h, &y, &pk.pp.q);
@@ -179,6 +184,9 @@ impl ExponentElGamal {
         // test 0<m<p
         // If decryption is required, a tighter bound is needed, i.e m < 2^32
         if m.ge(&pk.pp.q) || m.le(&BigInt::zero()) {
+            return Err(ElGamalError::EncryptionError);
+        }
+        if randomness.ge(&pk.pp.q) || randomness.le(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
         let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
@@ -307,5 +315,34 @@ mod tests {
         let c_tag = ElGamal::pow(&c, &constant);
         let message_tag = ElGamal::decrypt(&c_tag, &keypair.sk).unwrap();
         assert_eq!(BigInt::from(2197), message_tag);
+    }
+
+    #[test]
+    fn test_exponent_elgamal_homomorphic_add() {
+        let bit_size = 1024;
+        let pp = ElGamalPP::generate(bit_size);
+        let keypair = ElGamalKeyPair::generate(&pp);
+        let q_minus_1 = &pp.q - &BigInt::one();
+        let message1 = BigInt::sample_below(&pp.q);
+        let random1 = BigInt::sample_below(&pp.q);
+        let c1 =
+            ExponentElGamal::encrypt_from_predefined_randomness(&message1, &keypair.pk, &random1)
+                .unwrap();
+        let message2 = BigInt::sample_below(&pp.q);
+        let random2 = BigInt::sample_below(&pp.q);
+        let c2 =
+            ExponentElGamal::encrypt_from_predefined_randomness(&message2, &keypair.pk, &random2)
+                .unwrap();
+        let c = ExponentElGamal::add(&c1, &c2).unwrap();
+        let message_total = (&message1 + &message2).modulus(&q_minus_1);
+        let random_total = (&random1 + &random2).modulus(&q_minus_1);
+        let c_star = ExponentElGamal::encrypt_from_predefined_randomness(
+            &message_total,
+            &keypair.pk,
+            &random_total,
+        )
+        .unwrap();
+
+        assert_eq!(c_star, c);
     }
 }
