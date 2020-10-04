@@ -82,6 +82,18 @@ impl ElGamalKeyPair {
     }
 }
 
+impl ElGamalPublicKey {
+    pub fn add(&self, other: &ElGamalPublicKey) -> Result<Self, ElGamalError> {
+        match self.pp == other.pp {
+            true => Ok(ElGamalPublicKey {
+                h: &self.h + &other.h,
+                pp: self.pp.clone(),
+            }),
+            false => Err(ElGamalError::ParamError),
+        }
+    }
+}
+
 impl ElGamal {
     pub fn encrypt(m: &BigInt, pk: &ElGamalPublicKey) -> Result<ElGamalCiphertext, ElGamalError> {
         //test 0<m<p
