@@ -128,7 +128,6 @@ impl ElGamal {
         let s = BigInt::mod_pow(&pk.h, y, &pk.pp.q);
         //  let sm = &s * &m;
         let c2 = BigInt::mod_mul(&s, &m, &pk.pp.q);
-        //    let c2 = BigInt::modulus(&sm, &pk.pp.q);
         Ok(ElGamalCiphertext {
             c1,
             c2,
@@ -173,7 +172,7 @@ impl ExponentElGamal {
     pub fn encrypt(m: &BigInt, pk: &ElGamalPublicKey) -> Result<ElGamalCiphertext, ElGamalError> {
         // test 0<m<p
         // If decryption is required, a tighter bound is needed, i.e m < 2^32
-        if m.ge(&pk.pp.q) || m.le(&BigInt::zero()) {
+        if m.ge(&pk.pp.q) || m.lt(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
         let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
@@ -195,10 +194,10 @@ impl ExponentElGamal {
     ) -> Result<ElGamalCiphertext, ElGamalError> {
         // test 0<m<p
         // If decryption is required, a tighter bound is needed, i.e m < 2^32
-        if m.ge(&pk.pp.q) || m.le(&BigInt::zero()) {
+        if m.ge(&pk.pp.q) || m.lt(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
-        if randomness.ge(&pk.pp.q) || randomness.le(&BigInt::zero()) {
+        if randomness.ge(&pk.pp.q) || randomness.lt(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
         let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
