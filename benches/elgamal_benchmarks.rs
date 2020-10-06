@@ -116,20 +116,6 @@ mod elgamal_benches {
         group.finish();
     }
 
-    fn encrypt_decrypt_rfc7919(c: &mut Criterion) {
-        let mut group = c.benchmark_group("encrypt_decrypt_rfc7919");
-        for group_id in RFC_GROUPS.iter() {
-            group.bench_with_input(
-                BenchmarkId::from_parameter(group_id),
-                group_id,
-                |b, group_id| {
-                    b.iter(|| elgamal_encrypt_decrypt_rfc7919(*group_id));
-                },
-            );
-        }
-        group.finish();
-    }
-
     criterion_group! {
         name = benches;
         // config = Criterion::default();
@@ -137,7 +123,6 @@ mod elgamal_benches {
         targets =
             keypairs_from_bits,
             keypairs_from_rfc7919,
-            encrypt_decrypt_rfc7919,
             multiply,
             power,
     }
