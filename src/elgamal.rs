@@ -86,7 +86,7 @@ impl ElGamalPublicKey {
     pub fn add(&self, other: &ElGamalPublicKey) -> Result<Self, ElGamalError> {
         match self.pp == other.pp {
             true => Ok(ElGamalPublicKey {
-                h: &self.h + &other.h,
+                h: BigInt::mod_mul(&self.h, &other.h, &self.pp.q),
                 pp: self.pp.clone(),
             }),
             false => Err(ElGamalError::ParamError),
