@@ -13,6 +13,7 @@ pub struct ExponentElGamal;
 pub struct ElGamalPP {
     pub g: BigInt,
     pub q: BigInt,
+    pub p: BigInt,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

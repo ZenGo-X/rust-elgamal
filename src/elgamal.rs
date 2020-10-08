@@ -15,18 +15,6 @@ use curv::arithmetic::traits::Samplable;
 use curv::BigInt;
 
 impl ElGamalPP {
-    // use only for fast testing
-    pub fn generate(sec_param: usize) -> Self {
-        let mut q: BigInt;
-        q = BigInt::sample(sec_param);
-        while !is_prime(&q) {
-            q = q + BigInt::one();
-        }
-        let g = BigInt::sample_below(&q);
-
-        ElGamalPP { g, q }
-    }
-
     // we follow algorithm 8.65 in Katz-Lindell intro to cryptography second edition
     // we take l=2
     pub fn generate_safe(sec_param: usize) -> Self {
@@ -41,41 +29,37 @@ impl ElGamalPP {
         }
         let h = BigInt::sample_below(&p);
         let g = BigInt::mod_pow(&h, &BigInt::from(2), &p);
-        ElGamalPP { g, q }
+        ElGamalPP { g, q, p }
     }
 
     //https://tools.ietf.org/html/rfc7919
     // ffdhe2048
     pub fn generate_from_rfc7919(group_id: SupportedGroups) -> Self {
-        let srg = SRG::new(group_id);
-        // let q_str = SRG::p(group_id);
-        let q = BigInt::from_str_radix(srg.q, 16).unwrap();
-        let g = BigInt::from(srg.g);
-        ElGamalPP { g, q }
+        let srg = SRG::new(&group_id);
+        ElGamalPP {
+            g: BigInt::from(2),
+            q: BigInt::from_str_radix(srg.q, 16).unwrap(),
+            p: BigInt::from_str_radix(srg.p, 16).unwrap(),
+        }
     }
 
-    pub fn generate_from_predefined_randomness(
-        g: &BigInt,
-        p: &BigInt,
-    ) -> Result<Self, ElGamalError> {
+    pub fn generate_from_predefined_randomness(g: BigInt, q: BigInt) -> Result<Self, ElGamalError> {
+        let p = BigInt::from(2) * &q + BigInt::one();
         //test 0<m<p
         if g.ge(&p) || g.le(&BigInt::zero()) {
             return Err(ElGamalError::ParamError);
         }
-        if !is_prime(&p) {
+        if !is_prime(&q) {
             return Err(ElGamalError::ParamError);
         }
-        Ok(ElGamalPP {
-            g: g.clone(),
-            q: p.clone(),
-        })
+        Ok(ElGamalPP { g, q, p })
     }
 }
 
 impl ElGamalKeyPair {
     pub fn generate(pp: &ElGamalPP) -> Self {
         let x = BigInt::sample_below(&pp.q);
-        let h = BigInt::mod_pow(&pp.g, &x, &pp.q);
+        let h = BigInt::mod_pow(&pp.g, &x, &pp.p);
         let pk = ElGamalPublicKey { pp: pp.clone(), h };
         let sk = ElGamalPrivateKey { pp: pp.clone(), x };
         ElGamalKeyPair { pk, sk }
@@ -86,7 +70,7 @@ impl ElGamalPublicKey {
     pub fn add(&self, other: &ElGamalPublicKey) -> Result<Self, ElGamalError> {
         match self.pp == other.pp {
             true => Ok(ElGamalPublicKey {
-                h: BigInt::mod_mul(&self.h, &other.h, &self.pp.q),
+                h: BigInt::mod_mul(&self.h, &other.h, &self.pp.p),
                 pp: self.pp.clone(),
             }),
             false => Err(ElGamalError::ParamError),
@@ -101,9 +85,9 @@ impl ElGamal {
             return Err(ElGamalError::EncryptionError);
         }
         let y = BigInt::sample_below(&pk.pp.q);
-        let c1 = BigInt::mod_pow(&pk.pp.g, &y, &pk.pp.q);
-        let s = BigInt::mod_pow(&pk.h, &y, &pk.pp.q);
-        let c2 = BigInt::mod_mul(&s, &m, &pk.pp.q);
+        let c1 = BigInt::mod_pow(&pk.pp.g, &y, &pk.pp.p);
+        let s = BigInt::mod_pow(&pk.h, &y, &pk.pp.p);
+        let c2 = BigInt::mod_mul(&s, &m, &pk.pp.p);
         Ok(ElGamalCiphertext {
             c1,
             c2,
@@ -124,10 +108,10 @@ impl ElGamal {
             return Err(ElGamalError::EncryptionError);
         }
         let y = randomness;
-        let c1 = BigInt::mod_pow(&pk.pp.g, y, &pk.pp.q);
-        let s = BigInt::mod_pow(&pk.h, y, &pk.pp.q);
+        let c1 = BigInt::mod_pow(&pk.pp.g, y, &pk.pp.p);
+        let s = BigInt::mod_pow(&pk.h, y, &pk.pp.p);
         //  let sm = &s * &m;
-        let c2 = BigInt::mod_mul(&s, &m, &pk.pp.q);
+        let c2 = BigInt::mod_mul(&s, &m, &pk.pp.p);
         Ok(ElGamalCiphertext {
             c1,
             c2,
@@ -139,9 +123,9 @@ impl ElGamal {
         if c.pp != sk.pp {
             return Err(ElGamalError::DecryptionError);
         }
-        let c1_x = BigInt::mod_pow(&c.c1, &sk.x, &sk.pp.q);
-        let c1_x_inv = BigInt::mod_inv(&c1_x, &sk.pp.q);
-        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv, &sk.pp.q))
+        let c1_x = BigInt::mod_pow(&c.c1, &sk.x, &sk.pp.p);
+        let c1_x_inv = BigInt::mod_inv(&c1_x, &sk.pp.p);
+        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv, &sk.pp.p))
     }
 
     //Enc(m1) mul Enc(m2) = Enc(m1m2)
@@ -153,16 +137,16 @@ impl ElGamal {
             return Err(ElGamalError::HomomorphicError);
         }
         Ok(ElGamalCiphertext {
-            c1: BigInt::mod_mul(&c_a.c1, &c_b.c1, &c_a.pp.q),
-            c2: BigInt::mod_mul(&c_a.c2, &c_b.c2, &c_a.pp.q),
+            c1: BigInt::mod_mul(&c_a.c1, &c_b.c1, &c_a.pp.p),
+            c2: BigInt::mod_mul(&c_a.c2, &c_b.c2, &c_a.pp.p),
             pp: c_a.pp.clone(),
         })
     }
 
     pub fn pow(c: &ElGamalCiphertext, constant: &BigInt) -> ElGamalCiphertext {
         ElGamalCiphertext {
-            c1: BigInt::mod_pow(&c.c1, &constant, &c.pp.q),
-            c2: BigInt::mod_pow(&c.c2, &constant, &c.pp.q),
+            c1: BigInt::mod_pow(&c.c1, &constant, &c.pp.p),
+            c2: BigInt::mod_pow(&c.c2, &constant, &c.pp.p),
             pp: c.pp.clone(),
         }
     }
@@ -175,11 +159,11 @@ impl ExponentElGamal {
         if m.ge(&pk.pp.q) || m.lt(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
-        let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
+        let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.p);
         let y = BigInt::sample_below(&pk.pp.q);
-        let c1 = BigInt::mod_pow(&pk.pp.g, &y, &pk.pp.q);
-        let s = BigInt::mod_pow(&pk.h, &y, &pk.pp.q);
-        let c2 = BigInt::mod_mul(&s, &g_m, &pk.pp.q);
+        let c1 = BigInt::mod_pow(&pk.pp.g, &y, &pk.pp.p);
+        let s = BigInt::mod_pow(&pk.h, &y, &pk.pp.p);
+        let c2 = BigInt::mod_mul(&s, &g_m, &pk.pp.p);
         Ok(ElGamalCiphertext {
             c1,
             c2,
@@ -200,11 +184,11 @@ impl ExponentElGamal {
         if randomness.ge(&pk.pp.q) || randomness.lt(&BigInt::zero()) {
             return Err(ElGamalError::EncryptionError);
         }
-        let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.q);
+        let g_m = BigInt::mod_pow(&pk.pp.g, m, &pk.pp.p);
         let y = randomness;
-        let c1 = BigInt::mod_pow(&pk.pp.g, y, &pk.pp.q);
-        let s = BigInt::mod_pow(&pk.h, y, &pk.pp.q);
-        let c2 = BigInt::mod_mul(&s, &g_m, &pk.pp.q);
+        let c1 = BigInt::mod_pow(&pk.pp.g, y, &pk.pp.p);
+        let s = BigInt::mod_pow(&pk.h, y, &pk.pp.p);
+        let c2 = BigInt::mod_mul(&s, &g_m, &pk.pp.p);
         Ok(ElGamalCiphertext {
             c1,
             c2,
@@ -220,9 +204,9 @@ impl ExponentElGamal {
         if c.pp != sk.pp {
             return Err(ElGamalError::DecryptionError);
         }
-        let c1_x = BigInt::mod_pow(&c.c1, &sk.x, &sk.pp.q);
-        let c1_x_inv = BigInt::mod_inv(&c1_x, &sk.pp.q);
-        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv, &sk.pp.q))
+        let c1_x = BigInt::mod_pow(&c.c1, &sk.x, &sk.pp.p);
+        let c1_x_inv = BigInt::mod_inv(&c1_x, &sk.pp.p);
+        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv, &sk.pp.p))
     }
 
     //returns m
@@ -243,8 +227,8 @@ impl ExponentElGamal {
             return Err(ElGamalError::HomomorphicError);
         }
         Ok(ElGamalCiphertext {
-            c1: BigInt::mod_mul(&c_a.c1, &c_b.c1, &c_a.pp.q),
-            c2: BigInt::mod_mul(&c_a.c2, &c_b.c2, &c_a.pp.q),
+            c1: BigInt::mod_mul(&c_a.c1, &c_b.c1, &c_a.pp.p),
+            c2: BigInt::mod_mul(&c_a.c2, &c_b.c2, &c_a.pp.p),
             pp: c_a.pp.clone(),
         })
     }
@@ -252,8 +236,8 @@ impl ExponentElGamal {
     // homomorphically multiply m by a known constant
     pub fn mul(c: &ElGamalCiphertext, constant: &BigInt) -> ElGamalCiphertext {
         ElGamalCiphertext {
-            c1: BigInt::mod_pow(&c.c1, &constant, &c.pp.q),
-            c2: BigInt::mod_pow(&c.c2, &constant, &c.pp.q),
+            c1: BigInt::mod_pow(&c.c1, &constant, &c.pp.p),
+            c2: BigInt::mod_pow(&c.c2, &constant, &c.pp.p),
             pp: c.pp.clone(),
         }
     }
@@ -266,17 +250,6 @@ mod tests {
     use crate::ElGamalKeyPair;
     use crate::ElGamalPP;
     use curv::BigInt;
-
-    #[test]
-    fn test_elgamal() {
-        let bit_size = 1024;
-        let pp = ElGamalPP::generate(bit_size);
-        let keypair = ElGamalKeyPair::generate(&pp);
-        let message = BigInt::from(13);
-        let c = ElGamal::encrypt(&message, &keypair.pk).unwrap();
-        let message_tag = ElGamal::decrypt(&c, &keypair.sk).unwrap();
-        assert_eq!(message, message_tag);
-    }
 
     #[test]
     #[ignore]
@@ -303,8 +276,8 @@ mod tests {
 
     #[test]
     fn test_mul() {
-        let bit_size = 1024;
-        let pp = ElGamalPP::generate(bit_size);
+        let group_id = SupportedGroups::FFDHE2048;
+        let pp = ElGamalPP::generate_from_rfc7919(group_id);
         let keypair = ElGamalKeyPair::generate(&pp);
         let message1 = BigInt::from(13);
         let c1 = ElGamal::encrypt(&message1, &keypair.pk).unwrap();
@@ -330,10 +303,9 @@ mod tests {
 
     #[test]
     fn test_exponent_elgamal_homomorphic_add() {
-        let bit_size = 1024;
-        let pp = ElGamalPP::generate(bit_size);
+        let group_id = SupportedGroups::FFDHE2048;
+        let pp = ElGamalPP::generate_from_rfc7919(group_id);
         let keypair = ElGamalKeyPair::generate(&pp);
-        let q_minus_1 = &pp.q - &BigInt::one();
         let message1 = BigInt::sample_below(&pp.q);
         let random1 = BigInt::sample_below(&pp.q);
         let c1 =
@@ -345,8 +317,8 @@ mod tests {
             ExponentElGamal::encrypt_from_predefined_randomness(&message2, &keypair.pk, &random2)
                 .unwrap();
         let c = ExponentElGamal::add(&c1, &c2).unwrap();
-        let message_total = (&message1 + &message2).modulus(&q_minus_1);
-        let random_total = (&random1 + &random2).modulus(&q_minus_1);
+        let message_total = (&message1 + &message2).modulus(&pp.q);
+        let random_total = (&random1 + &random2).modulus(&pp.q);
         let c_star = ExponentElGamal::encrypt_from_predefined_randomness(
             &message_total,
             &keypair.pk,
