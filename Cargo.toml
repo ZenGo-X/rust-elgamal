@@ -24,4 +24,9 @@ tag = "v0.2.3"
 bencher = "0.1"
 serde_json = "1.0"
 rand = "0.6"
+criterion = "0.3.3"
+
+[[bench]]
+name = "elgamal_benchmarks"
+harness = false
 
