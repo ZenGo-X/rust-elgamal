@@ -33,7 +33,13 @@ Benchmarks are also included:
 cargo bench
 ```  
 
-Although we currently are not aware of reference benchmarks.
+The benchmarks are created by[criterion.rs](https://github.com/bheisler/criterion.rs) and the default reports include pretty cool plots, which are best with `gnuplot` installed, e.g., `brew install gnuplot`.  The benchmark reports can found in `../target/criterion/report` and `open index.html` should do.
+
+To run the benches without plots, or with any of the other [criterion.rs options](https://bheisler.github.io/criterion.rs/book/user_guide/command_line_options.html), use  
+
+```bash
+cargo bench --bench elgamal_benches -- --noplot
+```  
 
 ## Contact
 
