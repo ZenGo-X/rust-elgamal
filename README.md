@@ -41,6 +41,9 @@ To run the benches without plots, or with any of the other [criterion.rs options
 cargo bench --bench elgamal_benches -- --noplot
 ```  
 
+See `benches/examples` for a full results set.  
+
+
 ## Contact
 
 Feel free to [reach out](mailto:github@kzencorp.com) or join ZenGo X [Telegram](https://t.me/zengo_x) for discussions on code and research.
