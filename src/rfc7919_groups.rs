@@ -258,7 +258,7 @@ EADC00CA 446CE050 50FF183A D2BBF118 C1FC0EA5 1F97D22B
 7D7D5F0E 2EB8D43F 17BA0F7C 60FF437F 535DFEF2 9833BF86
 CBE88EA4 FBD4221E 84117283 54FA30A7 008F154A 41C7FC46
 6B4645DB E2E32126 7FFFFFFF FFFFFFFF";
-
+#[derive(Debug, Clone, PartialEq)]
 pub enum SupportedGroups {
     FFDHE2048,
     FFDHE3072,
@@ -267,6 +267,7 @@ pub enum SupportedGroups {
     FFDHE8192,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct SRG {
     pub p: &'static str,
     pub q: &'static str,
