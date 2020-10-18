@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+pub mod dl_solvers;
 pub mod elgamal;
 pub mod prime;
 pub mod rfc7919_groups;
