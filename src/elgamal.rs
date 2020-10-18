@@ -8,7 +8,6 @@ use crate::ElGamalPrivateKey;
 use crate::ElGamalPublicKey;
 use crate::ExponentElGamal;
 
-use crate::dl_solvers::SimplePollard;
 use crate::rfc7919_groups::{SupportedGroups, SRG};
 
 use curv::arithmetic::traits::Modulo;
@@ -216,10 +215,6 @@ impl ExponentElGamal {
         _sk: &ElGamalPrivateKey,
     ) -> Result<BigInt, ElGamalError> {
         //TODO
-        let big_p = _c.pp.p.clone() + BigInt::one();
-        let m = ExponentElGamal::decrypt_exp(_c, _sk).unwrap();
-        let simple_pollard = SimplePollard::new(&_c.pp.p, &big_p, &_c.pp.g, &m);
-        let res = simple_pollard.run();
         return Err(ElGamalError::DecryptionError);
     }
 
@@ -333,25 +328,5 @@ mod tests {
         .unwrap();
 
         assert_eq!(c_star, c);
-    }
-
-    fn test_exponent_elgamal_homomorphic_add_with_decryption() {
-        let group_id = SupportedGroups::FFDHE2048;
-        let pp = ElGamalPP::generate_from_rfc7919(group_id);
-        let keypair = ElGamalKeyPair::generate(&pp);
-        let message1 = BigInt::from(1_000);
-        let random1 = BigInt::sample_below(&pp.q);
-        let c1 =
-            ExponentElGamal::encrypt_from_predefined_randomness(&message1, &keypair.pk, &random1)
-                .unwrap();
-        let message2 = BigInt::from(3);
-        let random2 = BigInt::sample_below(&pp.q);
-        let c2 =
-            ExponentElGamal::encrypt_from_predefined_randomness(&message2, &keypair.pk, &random2)
-                .unwrap();
-        let c = ExponentElGamal::add(&c1, &c2).unwrap();
-
-        let res = ExponentElGamal::decrypt(&c, &keypair.sk).unwrap();
-        assert_eq!(BigInt::from(1_003), res);
     }
 }
