@@ -23,7 +23,7 @@ fn main() {
 
 
     // basic en/decryption roundtrip
-    let message = BigInt::from(13);    
+    let message = BigInt::from(13);
     let cipher = ElGamal::encrypt(&message, &alice_key_pair.pk).unwrap();
     let message_tag = ElGamal::decrypt(&cipher, &alice_key_pair.sk).unwrap();
     println!("basic encryption: message: {}, decrypted: {}", message, message_tag);
@@ -60,14 +60,13 @@ fn main() {
     // finally, we add the data
     let n = ciphers.len();
     let mut addition_cipher: ElGamalCiphertext = ExponentElGamal::add(&ciphers[0], &ciphers[1]).unwrap();
-    for idx in 2..n {        
+    for idx in 2..n {
         addition_cipher = ExponentElGamal::add(&ciphers[idx], &addition_cipher).unwrap();
     }
-    
 
-    // and now we decrypt, Due to the exponentiation,we end up with g^m
+    // and now we decrypt and due to the exponentiation we end up with g^m
     let c_tag =  ExponentElGamal::decrypt_exp(&addition_cipher, &alice_key_pair.sk).unwrap();
-    
+
     // and we're super inefficiently brute-forcing g^i mod p to validate the raw sum
     for i in 0..1_000_000 {
         let res = BigInt::mod_pow(&alice_key_pair.pk.pp.g, &BigInt::from(i), &alice_key_pair.pk.pp.p);
