@@ -1,13 +1,13 @@
 use curv::arithmetic::traits::Modulo;
 use curv::BigInt;
-
-use elgamal::{
-    rfc7919_groups::SupportedGroups, ElGamal, ElGamalKeyPair, ElGamalPP, ElGamalPrivateKey,
-    ElGamalPublicKey,ExponentElGamal,
-};
+use std::collections::HashMap;
 use uuid::Uuid;
 
-use std::collections::HashMap;
+use crate::rfc7919_groups::{SupportedGroups, SRG};
+use crate::{
+    ElGamal, ElGamalKeyPair, ElGamalPP, ElGamalPrivateKey, ElGamalPublicKey, ExponentElGamal,
+};
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Party {
     id: u32,
@@ -30,22 +30,19 @@ impl Party {
         }
     }
 
-    pub fn create_shared_secret(&mut self, session_id: String, pk: BigInt, ) -> Result<(), &'static str> {
+    pub fn create_shared_secret(
+        &mut self,
+        session_id: String,
+        pk: BigInt,
+    ) -> Result<(), &'static str> {
         if !self.shared_keypairs.get(&session_id).is_none() {
             return Err("Shared keypair already exists.");
         }
 
-        let shared_secret = BigInt::mod_pow(
-            &pk,
-            &self.keypair.sk.x,
-            &self.keypair.pk.pp.p,
-        );
+        let shared_secret = BigInt::mod_pow(&pk, &self.keypair.sk.x, &self.keypair.pk.pp.p);
 
-        let shared_pk = BigInt::mod_pow(
-            &self.keypair.pk.pp.g,
-            &shared_secret,
-            &self.keypair.pk.pp.p,
-        );
+        let shared_pk =
+            BigInt::mod_pow(&self.keypair.pk.pp.g, &shared_secret, &self.keypair.pk.pp.p);
 
         let shared_keypair = ElGamalKeyPair {
             pk: ElGamalPublicKey {
@@ -55,7 +52,7 @@ impl Party {
             sk: ElGamalPrivateKey {
                 pp: self.keypair.pk.pp.clone(),
                 x: shared_secret,
-            }
+            },
         };
 
         self.shared_keypairs.insert(session_id, shared_keypair);
@@ -68,10 +65,9 @@ impl Party {
     }
 
     pub fn get_shared_keypair(&self, session_id: String) -> Result<ElGamalKeyPair, &'static str> {
-
         match self.shared_keypairs.get(&session_id) {
             Some(kp) => Ok(kp.clone()),
-            None => Err("Referenced KeyPair does not exist.")
+            None => Err("Referenced KeyPair does not exist."),
         }
     }
 }
@@ -88,32 +84,34 @@ impl KeyExchange {
     pub fn new(group_id: SupportedGroups) -> Self {
         KeyExchange {
             session_id: Uuid::new_v4().to_string(),
-			group_id,
-			party_one_pk : None,
-			party_two_pk : None,
+            group_id,
+            party_one_pk: None,
+            party_two_pk: None,
         }
-	}
-	
-	pub fn update_pk(&mut self, party_one_pk: Option<BigInt>, party_two_pk: Option<BigInt>) -> Result<(), &'static str> {
-		if party_one_pk.is_none() && party_two_pk.is_none() {
-			return Err("Invalid party values. At least one party key != None.");
-		}
-		if self.party_one_pk.is_some() && party_one_pk.is_none() {
-			return Err("PK reset to None is not a valid option");
-		}
-		 else {
-			self.party_one_pk = party_one_pk;
-		}
+    }
 
-		if self.party_two_pk.is_some() && party_two_pk.is_none() {
-			return Err("PK reset to None is not a valid option");
-		}
-		else {
-			self.party_two_pk = party_two_pk;
-		}
-		
-		Ok(())
-	}
+    pub fn update_pk(
+        &mut self,
+        party_one_pk: Option<BigInt>,
+        party_two_pk: Option<BigInt>,
+    ) -> Result<(), &'static str> {
+        if party_one_pk.is_none() && party_two_pk.is_none() {
+            return Err("Invalid party values. At least one party key != None.");
+        }
+        if self.party_one_pk.is_some() && party_one_pk.is_none() {
+            return Err("PK reset to None is not a valid option");
+        } else {
+            self.party_one_pk = party_one_pk;
+        }
+
+        if self.party_two_pk.is_some() && party_two_pk.is_none() {
+            return Err("PK reset to None is not a valid option");
+        } else {
+            self.party_two_pk = party_two_pk;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -121,16 +119,11 @@ mod tests {
     use super::*;
     use curv::arithmetic::traits::Samplable;
 
-    fn test_new_key_exchange() {
-    }
+    fn test_new_key_exchange() {}
 
-    fn test_update_key_exchange_good() {
+    fn test_update_key_exchange_good() {}
 
-    }
-
-    fn test_update_key_exchange_bad() {
-        
-    }
+    fn test_update_key_exchange_bad() {}
     #[test]
     fn test_party_new() {
         let group_id = SupportedGroups::FFDHE2048;
@@ -151,7 +144,7 @@ mod tests {
         let mut alice: Party = Party::new(1, group_id.clone());
         let mut bob: Party = Party::new(2, group_id.clone());
 
-        let res_1 = alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone()); 
+        let res_1 = alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone());
         let res_2 = bob.create_shared_secret(session_id.clone(), alice.keypair.pk.h.clone());
         assert!(res_1.is_ok());
         assert!(res_2.is_ok());
@@ -162,7 +155,6 @@ mod tests {
 
         assert_ne!(alice.get_keypair().pk.h, alice_shared_kp.pk.h);
         assert_ne!(bob.get_keypair().pk.h, bob_shared_kp.pk.h);
-
     }
 
     #[test]
@@ -173,7 +165,7 @@ mod tests {
         let mut alice: Party = Party::new(1, group_id.clone());
         let mut bob: Party = Party::new(2, group_id.clone());
 
-        let res_1 = alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone()); 
+        let res_1 = alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone());
         let res_2 = bob.create_shared_secret(session_id.clone(), alice.keypair.pk.h.clone());
 
         let bob_shared_kp = bob.get_shared_keypair(session_id.clone()).unwrap();
@@ -189,7 +181,6 @@ mod tests {
         assert_eq!(message_tag_bob, message_tag_alice);
         assert_eq!(message, message_tag_alice);
         assert_eq!(message_tag_bob, message);
-
     }
     #[test]
     fn test_mul_encryption() {
@@ -199,7 +190,7 @@ mod tests {
         let mut alice: Party = Party::new(1, group_id.clone());
         let mut bob: Party = Party::new(2, group_id.clone());
 
-        alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone()); 
+        alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone());
         bob.create_shared_secret(session_id.clone(), alice.keypair.pk.h.clone());
 
         let bob_shared_kp = bob.get_shared_keypair(session_id.clone()).unwrap();
@@ -228,17 +219,16 @@ mod tests {
         assert_eq!(message_tag_alice, message_tag_bob);
         assert_eq!(message_tag_alice, BigInt::from(117));
     }
-    
+
     #[test]
     fn test_pow_encryption() {
-
         let group_id = SupportedGroups::FFDHE2048;
         let session_id = Uuid::new_v4().to_string();
 
         let mut alice: Party = Party::new(1, group_id.clone());
         let mut bob: Party = Party::new(2, group_id.clone());
 
-        alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone()); 
+        alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone());
         bob.create_shared_secret(session_id.clone(), alice.keypair.pk.h.clone());
 
         let bob_shared_kp = bob.get_shared_keypair(session_id.clone()).unwrap();
@@ -249,13 +239,12 @@ mod tests {
 
         let c = ElGamal::encrypt(&msg, &alice_shared_kp.pk).unwrap();
         let c_tag = ElGamal::pow(&c, &constant);
-        
+
         let message_tag_alice = ElGamal::decrypt(&c_tag, &alice_shared_kp.sk).unwrap();
         let message_tag_bob = ElGamal::decrypt(&c_tag, &bob_shared_kp.sk).unwrap();
 
         assert_eq!(message_tag_alice, message_tag_bob);
         assert_eq!(message_tag_alice, BigInt::from(2197));
-
     }
 
     #[test]
@@ -266,24 +255,29 @@ mod tests {
         let mut alice: Party = Party::new(1, group_id.clone());
         let mut bob: Party = Party::new(2, group_id.clone());
 
-        alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone()); 
+        alice.create_shared_secret(session_id.clone(), bob.keypair.pk.h.clone());
         bob.create_shared_secret(session_id.clone(), alice.keypair.pk.h.clone());
 
         let bob_shared_kp = bob.get_shared_keypair(session_id.clone()).unwrap();
         let alice_shared_kp = alice.get_shared_keypair(session_id.clone()).unwrap();
 
-
         let message1 = BigInt::sample_below(&bob.keypair.pk.pp.q);
         let random1 = BigInt::sample_below(&bob.keypair.pk.pp.q);
-        let c1 =
-            ExponentElGamal::encrypt_from_predefined_randomness(&message1, &bob_shared_kp.pk, &random1)
-                .unwrap();
+        let c1 = ExponentElGamal::encrypt_from_predefined_randomness(
+            &message1,
+            &bob_shared_kp.pk,
+            &random1,
+        )
+        .unwrap();
 
         let message2 = BigInt::sample_below(&alice.keypair.pk.pp.q);
         let random2 = BigInt::sample_below(&alice.keypair.pk.pp.q);
-        let c2 =
-            ExponentElGamal::encrypt_from_predefined_randomness(&message2, &alice_shared_kp.pk, &random2)
-                .unwrap();
+        let c2 = ExponentElGamal::encrypt_from_predefined_randomness(
+            &message2,
+            &alice_shared_kp.pk,
+            &random2,
+        )
+        .unwrap();
 
         let c = ExponentElGamal::add(&c1, &c2).unwrap();
         let message_total = (&message1 + &message2).modulus(&alice.keypair.pk.pp.q);
@@ -305,5 +299,4 @@ mod tests {
         .unwrap();
         assert_eq!(c_star, c);
     }
-
 }
