@@ -1,4 +1,4 @@
-use curv::arithmetic::traits::{ConvertFrom, Modulo};
+use curv::arithmetic::traits::Modulo;
 use curv::BigInt;
 
 // see https://en.wikipedia.org/wiki/Pollard%27s_rho_algorithm_for_logarithms#:~:text=Pollard's%20rho%20algorithm%20for%20logarithms%20is%20an%20algorithm%20introduced%20by,solve%20the%20integer%20factorization%20problem.&text=of%20the%20equation-,.,using%20the%20Extended%20Euclidean%20algorithm
@@ -28,21 +28,18 @@ impl<'a> SimplePollard<'a> {
     }
 
     fn step(&self, x: &mut BigInt, a: &mut BigInt, b: &mut BigInt) {
-        match ConvertFrom::_from(&x.modulus(&BigInt::from(POLLARD_PARTITION_N))) {
-            0 => {
-                *x = BigInt::mod_mul(x, x, self.big_p);
-                *a = BigInt::mod_mul(a, &BigInt::from(2), self.p);
-                *b = BigInt::mod_mul(b, &BigInt::from(2), self.p);
-            }
-            1 => {
-                *x = BigInt::mod_mul(x, self.alpha, self.big_p);
-                *a = BigInt::mod_add(a, &BigInt::one(), self.big_p);
-            }
-            _ => {
-                *x = BigInt::mod_mul(x, self.beta, self.big_p);
-                *b = BigInt::mod_add(b, &BigInt::one(), self.p);
-            }
-        };
+        let step_interval = x.modulus(&BigInt::from(POLLARD_PARTITION_N));
+        if step_interval == BigInt::zero() {
+            *x = BigInt::mod_mul(x, x, &self.big_p);
+            *a = BigInt::mod_mul(a, &BigInt::from(2), &self.p);
+            *b = BigInt::mod_mul(b, &BigInt::from(2), &self.p);
+        } else if step_interval == BigInt::one() {
+            *x = BigInt::mod_mul(x, &self.alpha, &self.big_p);
+            *a = BigInt::mod_add(a, &BigInt::one(), &self.big_p);
+        } else {
+            *x = BigInt::mod_mul(x, &self.beta, &self.big_p);
+            *b = BigInt::mod_add(b, &BigInt::one(), &self.p);
+        }
     }
 
     pub fn run(&self) -> Result<BigInt, SolverError> {
@@ -65,21 +62,22 @@ impl<'a> SimplePollard<'a> {
         if b.modulus(&self.p) == big_b.modulus(&self.p) {
             return Err(SolverError::PollardConvergenceError);
         }
-        Ok(x)
+        let nom = BigInt::mod_sub(&a, &big_a, &self.big_p);
+        let denom = BigInt::mod_sub(&big_b, &b, &self.big_p);
+        let res = BigInt::modulus(&(BigInt::mod_inv(&denom, &self.big_p) * &nom), &self.big_p);
+        Ok(res)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        rfc7919_groups::SupportedGroups, ElGamalCiphertext, ElGamalKeyPair, ElGamalPP,
-        ExponentElGamal,
-    };
+    use crate::{rfc7919_groups::SupportedGroups, ElGamalKeyPair, ElGamalPP, ExponentElGamal};
     use curv::arithmetic::traits::Samplable;
 
     #[test]
-    fn test_pollard() {
+    fn test_simple_pollard_wiki_example() {
+        // from https://en.wikipedia.org/wiki/Pollard%27s_rho_algorithm_for_logarithms
         let simple_pollard = SimplePollard {
             p: &BigInt::from(1018),
             big_p: &BigInt::from(1019),
@@ -88,8 +86,11 @@ mod tests {
         };
         let res = simple_pollard.run();
         assert!(res.is_ok());
-        let m = res.unwrap();
-        assert_eq!(m, BigInt::from(1010));
+        assert_eq!(res.clone().unwrap(), BigInt::from(10));
+        assert_eq!(
+            simple_pollard.beta,
+            &BigInt::powm(&simple_pollard.alpha, &res.unwrap(), &simple_pollard.big_p)
+        );
     }
 
     #[test]
@@ -112,7 +113,8 @@ mod tests {
         assert!(get_err.is_ok());
     }
 
-    // #[test]
+    #[test]
+    #[ignore]
     fn test_exponent_elgamal_homomorphic_add_with_decryption() {
         let group_id = SupportedGroups::FFDHE2048;
         let pp = ElGamalPP::generate_from_rfc7919(group_id);
