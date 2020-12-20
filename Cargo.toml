@@ -3,7 +3,8 @@ name = "elgamal"
 version = "0.0.2"
 edition = "2018"
 authors = [
-    "Omer <omer.shlomovits@gmail.com>"
+    "Omer <omer.shlomovits@gmail.com>",
+    "Bernhard <boneyard93501@gmail.com>"
 ]
 
 license = "GPL-3.0-or-later"
