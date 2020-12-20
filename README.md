@@ -2,7 +2,7 @@
 Simple interface for ElGamal and Homomorphic-ElGamal cryptosystems. 
 
 ## Usage
-````rust
+```rust
 use curv::arithmetic::traits::Modulo;
 use curv::arithmetic::traits::Samplable;
 use curv::BigInt;
