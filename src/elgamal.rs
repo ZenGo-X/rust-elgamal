@@ -319,6 +319,7 @@ mod tests {
         let c = ExponentElGamal::add(&c1, &c2).unwrap();
         let message_total = (&message1 + &message2).modulus(&pp.q);
         let random_total = (&random1 + &random2).modulus(&pp.q);
+
         let c_star = ExponentElGamal::encrypt_from_predefined_randomness(
             &message_total,
             &keypair.pk,
