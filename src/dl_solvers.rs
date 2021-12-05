@@ -1,4 +1,6 @@
 use curv::arithmetic::traits::Modulo;
+use curv::arithmetic::One;
+use curv::arithmetic::Zero;
 use curv::BigInt;
 
 // see https://en.wikipedia.org/wiki/Pollard%27s_rho_algorithm_for_logarithms#:~:text=Pollard's%20rho%20algorithm%20for%20logarithms%20is%20an%20algorithm%20introduced%20by,solve%20the%20integer%20factorization%20problem.&text=of%20the%20equation-,.,using%20the%20Extended%20Euclidean%20algorithm
@@ -64,7 +66,10 @@ impl<'a> SimplePollard<'a> {
         }
         let nom = BigInt::mod_sub(&a, &big_a, &self.big_p);
         let denom = BigInt::mod_sub(&big_b, &b, &self.big_p);
-        let res = BigInt::modulus(&(BigInt::mod_inv(&denom, &self.big_p) * &nom), &self.big_p);
+        let res = BigInt::modulus(
+            &(BigInt::mod_inv(&denom, &self.big_p).unwrap() * &nom),
+            &self.big_p,
+        );
         Ok(res)
     }
 }
@@ -89,7 +94,7 @@ mod tests {
         assert_eq!(res.clone().unwrap(), BigInt::from(10));
         assert_eq!(
             simple_pollard.beta,
-            &BigInt::powm(&simple_pollard.alpha, &res.unwrap(), &simple_pollard.big_p)
+            &BigInt::mod_pow(&simple_pollard.alpha, &res.unwrap(), &simple_pollard.big_p)
         );
     }
 

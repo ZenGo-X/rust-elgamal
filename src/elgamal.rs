@@ -12,6 +12,9 @@ use crate::rfc7919_groups::{SupportedGroups, SRG};
 
 use curv::arithmetic::traits::Modulo;
 use curv::arithmetic::traits::Samplable;
+use curv::arithmetic::Converter;
+use curv::arithmetic::One;
+use curv::arithmetic::Zero;
 use curv::BigInt;
 
 impl ElGamalPP {
@@ -125,7 +128,7 @@ impl ElGamal {
         }
         let c1_x = BigInt::mod_pow(&c.c1, &sk.x, &sk.pp.p);
         let c1_x_inv = BigInt::mod_inv(&c1_x, &sk.pp.p);
-        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv, &sk.pp.p))
+        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv.unwrap(), &sk.pp.p))
     }
 
     //Enc(m1) mul Enc(m2) = Enc(m1m2)
@@ -206,7 +209,7 @@ impl ExponentElGamal {
         }
         let c1_x = BigInt::mod_pow(&c.c1, &sk.x, &sk.pp.p);
         let c1_x_inv = BigInt::mod_inv(&c1_x, &sk.pp.p);
-        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv, &sk.pp.p))
+        Ok(BigInt::mod_mul(&c.c2, &c1_x_inv.unwrap(), &sk.pp.p))
     }
 
     //returns m

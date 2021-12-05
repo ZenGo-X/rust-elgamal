@@ -5,7 +5,7 @@ pub mod elgamal;
 pub mod prime;
 pub mod rfc7919_groups;
 
-pub use curv::arithmetic::big_gmp::BigInt;
+pub use curv::arithmetic::BigInt;
 
 pub struct ElGamal;
 pub struct ExponentElGamal;
