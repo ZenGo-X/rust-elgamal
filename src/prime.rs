@@ -1,6 +1,9 @@
 use curv::arithmetic::traits::Modulo;
-use curv::arithmetic::traits::NumberTests;
 use curv::arithmetic::traits::Samplable;
+use curv::arithmetic::BitManipulation;
+use curv::arithmetic::Integer;
+use curv::arithmetic::One;
+use curv::arithmetic::Zero;
 use curv::BigInt;
 
 // Runs the following three tests on a given `candidate` to determine
